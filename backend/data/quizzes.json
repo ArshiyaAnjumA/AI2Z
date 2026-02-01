@@ -1,0 +1,84 @@
+[
+    {
+        "lesson_id": "123e4567-e89b-12d3-a456-426614174000",
+        "questions": [
+            {
+                "id": "q1",
+                "question": "What is the core process of AI mentioned in the lesson?",
+                "options": [
+                    "Learning, reasoning, and self-correction",
+                    "Manual data entry",
+                    "Electrical engineering",
+                    "Human emotion simulation"
+                ],
+                "correct_index": 0,
+                "explanation": "AI simulates intelligence through learning, reasoning, and self-correction."
+            },
+            {
+                "id": "q2",
+                "question": "What analogy was used for AI?",
+                "options": [
+                    "A calculator",
+                    "A smart puppy",
+                    "A fast car",
+                    "A library"
+                ],
+                "correct_index": 1,
+                "explanation": "AI is like a smart puppy that needs training to learn."
+            },
+            {
+                "id": "q3",
+                "question": "AI is fundamentally made of what two things?",
+                "options": [
+                    "Ghosts and wires",
+                    "Math and code",
+                    "Robots and lasers",
+                    "Metal and glass"
+                ],
+                "correct_index": 1,
+                "explanation": "AI is essentially math and code learning patterns from data."
+            }
+        ]
+    },
+    {
+        "lesson_id": "123e4567-e89b-12d3-a456-426614174001",
+        "questions": [
+            {
+                "id": "l2_q1",
+                "question": "In traditional programming, what do you give the computer?",
+                "options": [
+                    "Rules and Data",
+                    "Data and Answers",
+                    "Logic and Magic",
+                    "Hardware and Software"
+                ],
+                "correct_index": 0,
+                "explanation": "Traditional programming provides explicit rules for the data."
+            },
+            {
+                "id": "l2_q2",
+                "question": "In Machine Learning, what does the computer figure out?",
+                "options": [
+                    "The data",
+                    "The answers",
+                    "The rules",
+                    "The hardware"
+                ],
+                "correct_index": 2,
+                "explanation": "ML figures out the rules/logic by looking at data and answers."
+            },
+            {
+                "id": "l2_q3",
+                "question": "Which analogy represents Machine Learning?",
+                "options": [
+                    "Following a recipe exactly",
+                    "Tasting a dish to figure out the recipe",
+                    "Reading a book out loud",
+                    "Printing a document"
+                ],
+                "correct_index": 1,
+                "explanation": "ML is like guessing the recipe by tasting the final dish."
+            }
+        ]
+    }
+]
