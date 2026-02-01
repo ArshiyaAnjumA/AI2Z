@@ -67,3 +67,31 @@ htmlcov/
 # Artifacts (your planning docs are in a different location)
 # Note: Keep these if you want them in git
 # brain/
+
+# Node.js / React Native / Expo
+node_modules/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.expo/
+.expo-shared/
+dist/
+web-build/
+expo-env.d.ts
+
+# React Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+.metro-health-check*
+
+# Generated native folders
+mobile/ios/
+mobile/android/
+
+# TypeScript
+*.tsbuildinfo
