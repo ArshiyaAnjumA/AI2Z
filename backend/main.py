@@ -4,13 +4,14 @@ load_dotenv()
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict, Any
+from datetime import date
 from backend.auth import get_current_user, supabase
 from backend.models import (
     UserProfile, LessonCompleteRequest, ProgressSummary,
     Quiz, QuizQuestion, QuizSubmitRequest, QuizResult, QuestionFeedback, Lesson,
     PracticeSubmitRequest, PracticeFeedbackResponse, NewsItem, NewsQuizSubmitRequest,
     Exam, ExamSubmitRequest, Certificate, UserProfileUpdate, UserStats, UserBadge,
-    DashboardSummary
+    DashboardSummary, AITerm
 )
 from backend.ai.lesson_flow_client import LessonFlowClient
 from backend.ai.quiz_flow_client import QuizFlowClient
@@ -218,12 +219,55 @@ async def get_progress_summary(user = Depends(get_current_user)):
             streak=stats.get("streak_days", 0),
             level=level,
             completed_lessons=stats.get("lessons_completed", 0),
-            daily_minutes=stats.get("daily_minutes", 0)
+            daily_minutes=stats.get("daily_minutes", 0),
+            last_activity_date=stats.get("last_activity_date")
         )
     except Exception as e:
         print(f"Error in get_progress_summary: {e}")
         # Return default if error
         return ProgressSummary(xp=0, streak=0, level="Beginner", completed_lessons=0)
+
+@app.get("/terms/daily", response_model=AITerm)
+async def get_term_of_day():
+    """
+    Returns the AI term of the day.
+    Uses deterministic rotation based on day of year so all users see the same term each day.
+    """
+    try:
+        # Get all terms from database
+        response = supabase.table("ai_terms").select("*").execute()
+        
+        if not response or not response.data or len(response.data) == 0:
+            raise HTTPException(status_code=404, detail="No terms found in database")
+        
+        terms = response.data
+        total_terms = len(terms)
+        
+        # Use day of year to select term (deterministic)
+        today = date.today()
+        day_of_year = today.timetuple().tm_yday  # 1-365/366
+        term_index = day_of_year % total_terms
+        
+        selected_term = terms[term_index]
+        
+        return AITerm(
+            id=selected_term["id"],
+            term=selected_term["term"],
+            definition=selected_term["definition"],
+            category=selected_term.get("category"),
+            difficulty=selected_term.get("difficulty")
+        )
+    except Exception as e:
+        print(f"Error in get_term_of_day: {e}")
+        # Return a fallback term
+        return AITerm(
+            id="fallback",
+            term="Machine Learning",
+            definition="A subset of AI that enables systems to learn and improve from experience without being explicitly programmed.",
+            category="ML",
+            difficulty="Beginner"
+        )
+
 
 @app.post("/progress/lesson_complete")
 def complete_lesson(request: LessonCompleteRequest, user = Depends(get_current_user)):
@@ -253,6 +297,14 @@ def complete_lesson(request: LessonCompleteRequest, user = Depends(get_current_u
             current_xp = current_stats.get("xp_total", 0)
             current_lessons = current_stats.get("lessons_completed", 0)
             current_daily_minutes = current_stats.get("daily_minutes", 0)
+            last_activity_date = current_stats.get("last_activity_date")
+            
+            # Check if it's a new day - reset daily_minutes if so
+            today = date.today().isoformat()
+            if last_activity_date != today:
+                # New day! Reset daily progress
+                current_daily_minutes = 0
+            
             new_xp = current_xp + 10
             new_lessons = current_lessons + 1
             new_daily_minutes = current_daily_minutes + 5
@@ -260,7 +312,8 @@ def complete_lesson(request: LessonCompleteRequest, user = Depends(get_current_u
             supabase.table("user_stats").update({
                 "xp_total": new_xp,
                 "lessons_completed": new_lessons,
-                "daily_minutes": new_daily_minutes
+                "daily_minutes": new_daily_minutes,
+                "last_activity_date": today
             }).eq("user_id", user.id).execute()
         else:
             # If stats don't exist, create them with initial values
@@ -273,7 +326,8 @@ def complete_lesson(request: LessonCompleteRequest, user = Depends(get_current_u
                     "xp_total": new_xp,
                     "lessons_completed": new_lessons,
                     "daily_minutes": new_daily_minutes,
-                    "streak_days": 1
+                    "streak_days": 1,
+                    "last_activity_date": date.today().isoformat()
                 }).execute()
             except Exception as inner_e:
                 print(f"Handled concurrent insert in lesson_complete: {inner_e}")

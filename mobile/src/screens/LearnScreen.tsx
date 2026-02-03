@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Typography, LightTheme, DarkTheme } from '../theme/tokens';
-import { api } from '../services/api';
+import { api, getTermOfDay } from '../services/api';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../services/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
@@ -19,6 +19,7 @@ export const LearnScreen = () => {
     const [summary, setSummary] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [dailyLesson, setDailyLesson] = useState<any>(null);
+    const [termOfDay, setTermOfDay] = useState<any>(null);
 
     const fetchData = async () => {
         try {
@@ -26,6 +27,10 @@ export const LearnScreen = () => {
             setProfile(data.profile);
             setSummary(data.progress);
             setDailyLesson(data.daily_lesson);
+
+            // Fetch term of the day
+            const term = await getTermOfDay();
+            setTermOfDay(term);
         } catch (e) {
             console.error(e);
         } finally {
@@ -61,7 +66,12 @@ export const LearnScreen = () => {
     const displayName = profile?.full_name || 'Arshiya'; // Using Arshiya as requested
     const displayLevel = summary?.level || profile?.skill_level || 'Beginner';
 
-    const dailyProgress = summary?.daily_minutes || 0;
+    // Check if it's a new day - if so, show 0 minutes (reset at midnight)
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const lastActivityDate = summary?.last_activity_date;
+    const isNewDay = lastActivityDate && lastActivityDate !== today;
+
+    const dailyProgress = isNewDay ? 0 : (summary?.daily_minutes || 0);
     const dailyGoal = 5;
     const progressPercent = Math.min((dailyProgress / dailyGoal) * 100, 100);
 
@@ -162,17 +172,23 @@ export const LearnScreen = () => {
                 {/* AI Term of the Day */}
                 <View style={[styles.section, { marginBottom: 32 }]}>
                     <Text style={[Typography.h3, { color: colors.textMedium, marginBottom: 12 }]}>AI Term of the Day</Text>
-                    <View style={[styles.termCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <View style={styles.termHeader}>
-                            <Text style={[Typography.body, { color: colors.text, fontWeight: '600' }]}>Overfitting</Text>
-                            <TouchableOpacity style={[styles.termBadge, { backgroundColor: colors.primaryLight }]}>
-                                <Text style={[Typography.caption, { color: colors.primaryDark, fontSize: 11 }]}>Learn</Text>
-                            </TouchableOpacity>
+                    {termOfDay ? (
+                        <View style={[styles.termCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                            <View style={styles.termHeader}>
+                                <Text style={[Typography.body, { color: colors.text, fontWeight: '600' }]}>{termOfDay.term}</Text>
+                                {termOfDay.difficulty && (
+                                    <View style={[styles.termBadge, { backgroundColor: colors.primaryLight }]}>
+                                        <Text style={[Typography.caption, { color: colors.primaryDark, fontSize: 11 }]}>{termOfDay.difficulty}</Text>
+                                    </View>
+                                )}
+                            </View>
+                            <Text style={[Typography.caption, { color: colors.textLight, marginTop: 4 }]}>
+                                {termOfDay.definition}
+                            </Text>
                         </View>
-                        <Text style={[Typography.caption, { color: colors.textLight, marginTop: 4 }]}>
-                            When a model learns the training data too well, including its noise, failing to generalize to new data.
-                        </Text>
-                    </View>
+                    ) : (
+                        <ActivityIndicator color={colors.primary} />
+                    )}
                 </View>
             </ScrollView>
         </SafeAreaView>

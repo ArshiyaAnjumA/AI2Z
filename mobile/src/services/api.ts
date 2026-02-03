@@ -80,3 +80,8 @@ export const api = {
         }
     }
 };
+
+// Term of the Day
+export const getTermOfDay = async () => {
+    return await api.get('/terms/daily');
+};

@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List
 
+# User Models
 class UserProfile(BaseModel):
     user_id: str
     email: str
@@ -8,6 +9,14 @@ class UserProfile(BaseModel):
     avatar_url: Optional[str] = None
     target_goal: Optional[str] = None
     skill_level: Optional[str] = None
+
+# AI Term of the Day
+class AITerm(BaseModel):
+    id: str
+    term: str
+    definition: str
+    category: Optional[str] = None
+    difficulty: Optional[str] = None
 
 class UserProfileUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -41,6 +50,7 @@ class ProgressSummary(BaseModel):
     level: str
     completed_lessons: int
     daily_minutes: int
+    last_activity_date: Optional[str] = None
 
 class Lesson(BaseModel):
     id: str
