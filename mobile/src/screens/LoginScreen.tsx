@@ -12,6 +12,8 @@ export const LoginScreen = () => {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
+    const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
+
     async function signInWithEmail() {
         setLoading(true);
         const { error } = await supabase.auth.signInWithPassword({
@@ -25,14 +27,79 @@ export const LoginScreen = () => {
 
     async function signUpWithEmail() {
         setLoading(true);
+        // Use Expo's dynamic URL generation to support real devices + simulator
+        // This handles exp://<LAN_IP>:19000 automatically
+        const redirectUrl = CreateUrl('/auth/callback');
+        console.log("Redirect URL:", redirectUrl); // Debugging help
+
         const { error } = await supabase.auth.signUp({
             email,
             password,
+            options: {
+                emailRedirectTo: redirectUrl
+            }
         });
 
         if (error) Alert.alert('Error', error.message);
         else Alert.alert('Success', 'Check your email for confirmation!');
         setLoading(false);
+    }
+
+    async function sendResetPasswordEmail() {
+        setLoading(true);
+        const redirectUrl = 'exp://localhost:19000/--/reset-password';
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: redirectUrl
+        });
+
+        if (error) {
+            if (error.message.includes("rate limit") || error.status === 429) {
+                Alert.alert("Too Many Attempts", "Please wait a minute before requesting another password reset email.");
+            } else {
+                Alert.alert('Error', error.message);
+            }
+        } else {
+            Alert.alert('Success', 'Password reset email sent! Please check your inbox.');
+        }
+        setLoading(false);
+    }
+
+    if (forgotPasswordMode) {
+        return (
+            <View style={[styles.container, { backgroundColor: colors.background }]}>
+                <Text style={[Typography.header, styles.title, { color: colors.text }]}>Reset Password</Text>
+
+                <Text style={{ color: colors.textLight, textAlign: 'center', marginBottom: 20 }}>
+                    Enter your email to receive a reset link.
+                </Text>
+
+                <View style={[styles.inputContainer, { borderColor: colors.border }]}>
+                    <TextInput
+                        onChangeText={setEmail}
+                        value={email}
+                        placeholder="email@address.com"
+                        placeholderTextColor={colors.textLight}
+                        autoCapitalize={'none'}
+                        style={[styles.input, { color: colors.text }]}
+                    />
+                </View>
+
+                <TouchableOpacity
+                    style={[styles.button, { backgroundColor: colors.primary }]}
+                    onPress={sendResetPasswordEmail}
+                    disabled={loading}
+                >
+                    {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Send Reset Link</Text>}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={{ marginTop: 20, alignSelf: 'center' }}
+                    onPress={() => setForgotPasswordMode(false)}
+                >
+                    <Text style={{ color: colors.textLight }}>Back to Login</Text>
+                </TouchableOpacity>
+            </View>
+        );
     }
 
     return (
@@ -76,9 +143,18 @@ export const LoginScreen = () => {
             >
                 <Text style={[styles.buttonText, { color: colors.primary }]}>Sign Up</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+                style={{ marginTop: 20, alignSelf: 'center' }}
+                onPress={() => setForgotPasswordMode(!forgotPasswordMode)}
+            >
+                <Text style={{ color: colors.textLight, textDecorationLine: 'underline' }}>
+                    {forgotPasswordMode ? "Back to Login" : "Forgot Password?"}
+                </Text>
+            </TouchableOpacity>
         </View>
     );
-}
+};
 
 const styles = StyleSheet.create({
     container: {

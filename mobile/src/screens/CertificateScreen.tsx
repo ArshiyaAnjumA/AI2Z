@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Share, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Typography, LightTheme, DarkTheme } from '../theme/tokens';
-import { api } from '../services/api';
+import { getCertificate } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -16,7 +16,24 @@ export const CertificateScreen = ({ route, navigation }: any) => {
     useEffect(() => {
         const fetchCert = async () => {
             try {
-                const data = await api.get(`/certificates/verify/${code}`);
+                // 'code' param here is actually used as ID in navigation from list, 
+                // OR as code if deep linked? 
+                // CertificatesList passes: navigation.navigate('Certificate', { code: item.certificate_code })
+                // BUT item.id is the UUID. 
+                // getCertificate(id) expects UUID.
+
+                // If passed 'code' is not UUID, we might need to search by code.
+                // But getCertificate logic in api.ts uses .eq('id', certificateId).
+                // I should update CertificatesList to pass ID.
+
+                // Assuming CertificatesList updated to pass ID in next step (or previous step).
+                // Wait, previous step: navigation.navigate('Certificate', { code: item.certificate_code })
+                // I need to change that to { code: item.id } (and rename param to id?)
+                // Or handle both. 
+
+                // Let's assume passed param is ID for now and rename variable if possible, 
+                // or just pass ID as 'code' param key to avoid breaks.
+                const data = await getCertificate(code);
                 setCertificate(data);
             } catch (e) {
                 Alert.alert("Error", "Certificate not found.");

@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Typography, LightTheme, DarkTheme } from '../theme/tokens';
-import { api, getTermOfDay } from '../services/api';
+import { getDashboardSummary, getTermOfDay } from '../services/api';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../services/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
@@ -23,7 +23,7 @@ export const LearnScreen = () => {
 
     const fetchData = async () => {
         try {
-            const data = await api.get('/profile/dashboard');
+            const data = await getDashboardSummary();
             setProfile(data.profile);
             setSummary(data.progress);
             setDailyLesson(data.daily_lesson);
@@ -63,7 +63,7 @@ export const LearnScreen = () => {
         )
     }
 
-    const displayName = profile?.full_name || 'Arshiya'; // Using Arshiya as requested
+    const displayName = profile?.full_name || 'Learner';
     const displayLevel = summary?.level || profile?.skill_level || 'Beginner';
 
     // Check if it's a new day - if so, show 0 minutes (reset at midnight)
@@ -152,7 +152,7 @@ export const LearnScreen = () => {
                         <View style={styles.goalInfo}>
                             <View>
                                 <Text style={[Typography.body, { color: colors.text, fontWeight: '600' }]}>{dailyGoal} minutes</Text>
-                                <Text style={[Typography.caption, { color: colors.textLight }]}>{dailyProgress} / {dailyGoal} min</Text>
+                                <Text style={[Typography.caption, { color: colors.textLight }]}>{Math.min(dailyProgress, dailyGoal)} / {dailyGoal} min</Text>
                             </View>
                             {dailyProgress < dailyGoal && (
                                 <TouchableOpacity

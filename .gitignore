@@ -4,72 +4,16 @@
 .env.local
 .env*.local
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Virtual Environment
-venv/
-ENV/
-env/
-.venv
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-
-# Logs
-*.log
-logs/
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
 # macOS
 .DS_Store
 .AppleDouble
 .LSOverride
 
-# Artifacts (your planning docs are in a different location)
-# Note: Keep these if you want them in git
-# brain/
+# Agent Artifacts (Do not commit)
+brain/
+.gemini/
+.agent/
 
-# Node.js / React Native / Expo
-node_modules/
 npm-debug.*
 yarn-debug.*
 yarn-error.*
@@ -79,19 +23,21 @@ dist/
 web-build/
 expo-env.d.ts
 
-# React Native
-.kotlin/
-*.orig.*
+# Mobile Native Generated (Expo Prebuild)
+mobile/ios/
+mobile/android/
+
+# React Native Keystores
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
-.metro-health-check*
-
-# Generated native folders
-mobile/ios/
-mobile/android/
+*.orig.*
 
 # TypeScript
 *.tsbuildinfo
+
+# Supabase
+supabase/.branches/
+supabase/.temp/

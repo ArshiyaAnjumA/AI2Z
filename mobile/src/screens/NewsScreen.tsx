@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity, Modal, ScrollView, Alert, Platform } from 'react-native';
 import { Typography, LightTheme, DarkTheme } from '../theme/tokens';
-import { api } from '../services/api';
+import { getNews, submitNewsQuiz } from '../services/api';
 import { useTheme } from '../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -18,7 +18,7 @@ export const NewsScreen = () => {
 
     const fetchNews = async () => {
         try {
-            const data = await api.get('/news/today');
+            const data = await getNews();
             setNews(data || []);
         } catch (e) {
             console.error(e);
@@ -49,10 +49,7 @@ export const NewsScreen = () => {
             const percentage = Math.round((finalScore / selectedNews.quiz_json.length) * 100);
 
             try {
-                await api.post('/news/quiz/submit', {
-                    news_id: selectedNews.id,
-                    score: percentage
-                });
+                await submitNewsQuiz(selectedNews.id, percentage);
             } catch (e) {
                 console.error(e);
             }

@@ -1,54 +1,34 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Typography, LightTheme, DarkTheme } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 
-const TRACKS = [
-    {
-        id: '1',
-        name: 'AI Fundamentals',
-        subtitle: 'Beginner • 12 lessons',
-        progress: 0.4,
-        track: 'ai_fundamentals'
-    },
-    {
-        id: '2',
-        name: 'Machine Learning',
-        subtitle: 'Intermediate • 15 lessons',
-        progress: 0,
-        track: 'machine_learning'
-    },
-    {
-        id: '3',
-        name: 'Deep Learning',
-        subtitle: 'Advanced • 20 lessons',
-        progress: 0,
-        track: 'deep_learning'
-    },
-    {
-        id: '4',
-        name: 'Generative AI',
-        subtitle: 'Intermediate • 10 lessons',
-        progress: 0,
-        track: 'generative_ai'
-    },
-    {
-        id: '5',
-        name: 'Prompt Engineering',
-        subtitle: 'Beginner • 8 lessons',
-        progress: 0,
-        track: 'prompt_engineering'
-    },
-];
-
 export const TracksScreen = ({ navigation }: any) => {
     const { isDark } = useTheme();
     const colors = isDark ? DarkTheme : LightTheme;
+    const [tracks, setTracks] = React.useState<any[]>([]);
+    const [loading, setLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        loadTracks();
+    }, []);
+
+    const loadTracks = async () => {
+        try {
+            const { getTracks } = require('../services/api');
+            const data = await getTracks();
+            setTracks(data || []);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    }
 
     const handleContinue = (track: any) => {
-        navigation.navigate('TrackDetail', { trackId: track.track, trackName: track.name });
+        navigation.navigate('TrackDetail', { trackId: track.id, trackName: track.title });
     };
 
     return (
@@ -62,36 +42,28 @@ export const TracksScreen = ({ navigation }: any) => {
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
-                {TRACKS.map((track) => (
-                    <View key={track.id} style={[styles.trackCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <View style={styles.trackInfo}>
-                            <Text style={[Typography.h3, { color: colors.text }]}>{track.name}</Text>
-                            <Text style={[Typography.caption, { color: colors.textLight, marginTop: 4 }]}>{track.subtitle}</Text>
-
-                            <View style={[styles.progressBackground, { backgroundColor: colors.border }]}>
-                                <View
-                                    style={[
-                                        styles.progressBar,
-                                        {
-                                            backgroundColor: colors.primary,
-                                            width: `${track.progress * 100}%`
-                                        }
-                                    ]}
-                                />
+                {loading ? (
+                    <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />
+                ) : (
+                    tracks.map((track) => (
+                        <View key={track.id} style={[styles.trackCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                            <View style={styles.trackInfo}>
+                                <Text style={[Typography.h3, { color: colors.text }]}>{track.title}</Text>
+                                <Text style={[Typography.caption, { color: colors.textLight, marginTop: 4 }]}>{track.description}</Text>
+                                <Text style={[Typography.caption, { color: colors.textLight, marginTop: 4 }]}>
+                                    {track.lessons ? track.lessons.length : 0} lessons
+                                </Text>
                             </View>
-                            <Text style={[Typography.caption, { color: colors.textLight, marginTop: 4 }]}>
-                                {Math.round(track.progress * 100)}% complete
-                            </Text>
-                        </View>
 
-                        <TouchableOpacity
-                            style={[styles.continueButton, { backgroundColor: colors.primary }]}
-                            onPress={() => handleContinue(track)}
-                        >
-                            <Text style={[Typography.buttonText, { color: colors.white }]}>Continue</Text>
-                        </TouchableOpacity>
-                    </View>
-                ))}
+                            <TouchableOpacity
+                                style={[styles.continueButton, { backgroundColor: colors.primary }]}
+                                onPress={() => handleContinue(track)}
+                            >
+                                <Text style={[Typography.buttonText, { color: colors.white }]}>Continue</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ))
+                )}
             </ScrollView>
         </SafeAreaView>
     );

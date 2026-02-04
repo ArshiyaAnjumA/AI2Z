@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet, ScrollView, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Typography, LightTheme, DarkTheme } from '../theme/tokens';
-import { api } from '../services/api';
+import { getPracticeFeedback } from '../services/api';
 import { useTheme } from '../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -26,11 +26,8 @@ export const PracticeScreen = () => {
         if (!userPrompt.trim()) return;
         setLoading(true);
         try {
-            const data = await api.post('/practice/feedback', {
-                task: selectedTask.label,
-                user_prompt: userPrompt,
-                level: 'beginner'
-            });
+            // Replaced generic API call with specific service function
+            const data = await getPracticeFeedback(selectedTask.label, userPrompt, 'beginner');
             setFeedback(data);
         } catch (e) {
             console.error(e);

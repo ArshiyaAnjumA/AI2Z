@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ProgressBarAndroid, ActivityIndicator, Sc
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Typography, LightTheme, DarkTheme } from '../theme/tokens';
 import { Lesson } from '../types/lesson';
-import { api } from '../services/api';
+import { getLesson, completeLesson } from '../services/api';
 import { useTheme } from '../theme/ThemeContext';
 
 // Props would typically come from Navigation Params
@@ -31,7 +31,7 @@ export const LessonPlayerScreen = ({ route, navigation }: any) => {
 
     const fetchLesson = async () => {
         try {
-            const data = await api.get(`/lessons/${lessonId}`);
+            const data = await getLesson(lessonId);
             setLesson(data);
         } catch (e) {
             console.error(e);
@@ -53,10 +53,8 @@ export const LessonPlayerScreen = ({ route, navigation }: any) => {
     const handleComplete = async () => {
         if (lesson) {
             try {
-                await api.post('/progress/lesson_complete', {
-                    lesson_id: lesson.id,
-                    score: 100
-                });
+                // Call completeLesson directly (Database Trigger handles XP/Streak)
+                await completeLesson(lesson.id, 100);
 
                 // Check if this is a placeholder lesson (quiz won't exist for it)
                 if (lesson.id === '00000000-0000-0000-0000-000000000000') {
@@ -64,6 +62,11 @@ export const LessonPlayerScreen = ({ route, navigation }: any) => {
                     navigation.navigate('MainTabs');
                     return;
                 }
+
+                // TRIGGER AUTO-GENERATION (Fire and Forget)
+                // We import and call this here so it runs while user takes the quiz
+                const { autoGenerateNextLesson } = require('../services/api');
+                autoGenerateNextLesson(lesson).catch((err: any) => console.warn("Background Gen Error:", err));
 
                 navigation.navigate('Quiz', { lessonId: lesson.id });
             } catch (e) {

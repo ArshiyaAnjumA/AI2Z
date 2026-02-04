@@ -3,7 +3,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, RefreshControl, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Typography, LightTheme, DarkTheme } from '../theme/tokens';
-import { api } from '../services/api';
+import { getProfile, getStats, getBadges } from '../services/api';
 import { useAuth } from '../services/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,9 +22,9 @@ export const ProfileScreen = ({ navigation }: any) => {
     const fetchData = async () => {
         try {
             const [profileRes, statsRes, badgesRes] = await Promise.all([
-                api.get('/profile/me'),
-                api.get('/profile/stats'),
-                api.get('/profile/badges')
+                getProfile(),
+                getStats(),
+                getBadges()
             ]);
             setProfile(profileRes);
             setStats(statsRes);

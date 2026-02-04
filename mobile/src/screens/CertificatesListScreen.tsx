@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Typography, LightTheme, DarkTheme } from '../theme/tokens';
-import { api } from '../services/api';
+import { getCertificates } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
@@ -16,8 +16,8 @@ export const CertificatesListScreen = ({ navigation }: any) => {
 
     const fetchCertificates = async () => {
         try {
-            const data = await api.get('/certificates/me');
-            setCertificates(data);
+            const data = await getCertificates();
+            setCertificates(data || []);
         } catch (e) {
             console.error("Error fetching certificates:", e);
         } finally {
@@ -40,14 +40,14 @@ export const CertificatesListScreen = ({ navigation }: any) => {
     const renderItem = ({ item }: any) => (
         <TouchableOpacity
             style={styles.certCard}
-            onPress={() => navigation.navigate('Certificate', { code: item.certificate_code })}
+            onPress={() => navigation.navigate('Certificate', { code: item.id })}
         >
             <View style={styles.iconContainer}>
                 <Ionicons name="ribbon" size={32} color="#D4AF37" />
             </View>
             <View style={styles.infoContainer}>
                 <Text style={[styles.certTitle, { color: colors.text }]}>AI Fundamentals Certificate</Text>
-                <Text style={[styles.certDate, { color: colors.textLight }]}>Issued on {item.issue_date}</Text>
+                <Text style={[styles.certDate, { color: colors.textLight }]}>Issued on {new Date(item.issued_at).toLocaleDateString()}</Text>
                 <Text style={[styles.certCode, { color: colors.textLight }]}>Code: {item.certificate_code}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textLight} />

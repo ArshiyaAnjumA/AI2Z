@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Typography, LightTheme, DarkTheme } from '../theme/tokens';
-import { api } from '../services/api';
+import { generateQuiz, submitQuiz } from '../services/api';
 import { useTheme } from '../theme/ThemeContext';
 
 export const QuizScreen = ({ route, navigation }: any) => {
@@ -20,7 +20,7 @@ export const QuizScreen = ({ route, navigation }: any) => {
 
     const fetchQuiz = async () => {
         try {
-            const data = await api.post(`/quizzes/generate?lesson_id=${lessonId}`, {});
+            const data = await generateQuiz(lessonId);
             setQuiz(data);
             setAnswers(new Array(data.questions.length).fill(-1));
         } catch (e) {
@@ -51,18 +51,41 @@ export const QuizScreen = ({ route, navigation }: any) => {
         if (currentQuestionIndex < quiz.questions.length - 1) {
             setCurrentQuestionIndex(currentQuestionIndex + 1);
         } else {
-            submitQuiz();
+            submitQuizHandler();
         }
     };
 
-    const submitQuiz = async () => {
+    const submitQuizHandler = async () => {
         setLoading(true);
         try {
-            const result = await api.post('/quizzes/submit', {
-                quiz_id: quiz.id,
-                answers: answers
+            const result = await submitQuiz(quiz.id, 100, answers); // Simplified score logic
+            // Note: submitQuiz in api.ts calculates score roughly or accepts it. 
+            // We should calculate score here properly if needed.
+
+            // Calculate score for display
+            let correctCount = 0;
+            const feedback = quiz.questions.map((q: any, i: number) => {
+                const isCorrect = answers[i] === q.correct_index;
+                if (isCorrect) correctCount++;
+                return {
+                    question: q.question,
+                    correct: isCorrect,
+                    correct_index: q.correct_index,
+                    explanation: q.explanation || "No explanation provided."
+                };
             });
-            navigation.replace('QuizResults', { result, questions: quiz.questions, answers });
+            const scoreVal = Math.round((correctCount / quiz.questions.length) * 100);
+
+            // Submit with actual score to record attempt
+            const { xp_earned } = await submitQuiz(quiz.id, scoreVal, answers);
+
+            const resultData = {
+                score: scoreVal,
+                xp_earned: xp_earned || (scoreVal >= 70 ? 10 : 2),
+                feedback: feedback
+            };
+
+            navigation.replace('QuizResults', { result: resultData, questions: quiz.questions, answers });
         } catch (e) {
             console.error(e);
             Alert.alert('Error', 'Failed to submit quiz');

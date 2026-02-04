@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Typography, LightTheme, DarkTheme } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '../services/api';
+import { getLessonsForTrack } from '../services/api';
 
 export const TrackDetailScreen = ({ route, navigation }: any) => {
     const { trackId, trackName } = route.params;
@@ -20,7 +20,7 @@ export const TrackDetailScreen = ({ route, navigation }: any) => {
 
     const fetchLessons = async () => {
         try {
-            const data = await api.get(`/tracks/${trackId}/lessons`);
+            const data = await getLessonsForTrack(trackId);
             setLessons(data);
         } catch (e) {
             console.error(e);

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Typography, LightTheme, DarkTheme } from '../theme/tokens';
-import { api } from '../services/api';
+import { getFinalExam, submitExam } from '../services/api';
 import { useTheme } from '../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -20,7 +20,11 @@ export const ExamScreen = ({ navigation }: any) => {
     const startExam = async () => {
         setLoading(true);
         try {
-            const data = await api.get('/exams/final');
+            const data = await getFinalExam();
+            // Ensure exactly 50 questions (truncating if we got the requested buffer of 55)
+            if (data && data.questions && data.questions.length > 50) {
+                data.questions = data.questions.slice(0, 50);
+            }
             setExam(data);
             setStep('playing');
             setCurrentIndex(0);
@@ -42,16 +46,28 @@ export const ExamScreen = ({ navigation }: any) => {
         }
     };
 
-    const submitExam = async () => {
+    const submitExamHandler = async () => {
         setLoading(true);
         try {
-            const res = await api.post('/exams/submit', {
-                exam_id: exam.id,
-                answers: answers
-            });
-            setResult(res);
+            // Calculate score locally first
+            let correctCount = 0;
+            if (exam && exam.questions) {
+                exam.questions.forEach((q: any, i: number) => {
+                    if (answers[i] === q.correct_index) correctCount++;
+                });
+            }
+
+            // Avoid division by zero
+            const totalQuestions = exam?.questions?.length || 1;
+            const score = Math.round((correctCount / totalQuestions) * 100);
+
+            // Call API to persist attempt and generate certificate
+            const resultData = await submitExam(score, answers);
+
+            setResult(resultData);
             setStep('results');
         } catch (e) {
+            console.error(e);
             Alert.alert("Error", "Failed to submit exam.");
         } finally {
             setLoading(false);
@@ -139,7 +155,7 @@ export const ExamScreen = ({ navigation }: any) => {
                     {currentIndex === exam.questions.length - 1 ? (
                         <TouchableOpacity
                             style={[styles.submitButton, { backgroundColor: colors.success }]}
-                            onPress={submitExam}
+                            onPress={submitExamHandler}
                         >
                             <Text style={styles.submitButtonText}>Finish Exam</Text>
                         </TouchableOpacity>
