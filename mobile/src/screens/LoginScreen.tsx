@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Alert, View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import * as Linking from 'expo-linking';
 import { supabase } from '../services/supabase';
 import { Typography, LightTheme, DarkTheme } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
@@ -16,52 +17,64 @@ export const LoginScreen = () => {
 
     async function signInWithEmail() {
         setLoading(true);
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
-
-        if (error) Alert.alert('Error', error.message);
-        setLoading(false);
+        try {
+            const { error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
+            if (error) Alert.alert('Error', error.message);
+        } catch (e: any) {
+            Alert.alert('Error', e.message || 'An unexpected error occurred');
+        } finally {
+            setLoading(false);
+        }
     }
 
     async function signUpWithEmail() {
         setLoading(true);
-        // Use Expo's dynamic URL generation to support real devices + simulator
-        // This handles exp://<LAN_IP>:19000 automatically
-        const redirectUrl = CreateUrl('/auth/callback');
-        console.log("Redirect URL:", redirectUrl); // Debugging help
+        try {
+            const redirectUrl = Linking.createURL('/auth/callback');
+            console.log("Redirect URL:", redirectUrl);
 
-        const { error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                emailRedirectTo: redirectUrl
-            }
-        });
+            const { error } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    emailRedirectTo: redirectUrl
+                }
+            });
 
-        if (error) Alert.alert('Error', error.message);
-        else Alert.alert('Success', 'Check your email for confirmation!');
-        setLoading(false);
+            if (error) Alert.alert('Error', error.message);
+            else Alert.alert('Success', 'Check your email for confirmation!');
+        } catch (e: any) {
+            Alert.alert('Error', e.message || 'An unexpected error occurred');
+        } finally {
+            setLoading(false);
+        }
     }
 
     async function sendResetPasswordEmail() {
         setLoading(true);
-        const redirectUrl = 'exp://localhost:19000/--/reset-password';
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: redirectUrl
-        });
+        try {
+            const redirectUrl = 'exp://localhost:19000/--/reset-password';
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: redirectUrl
+            });
 
-        if (error) {
-            if (error.message.includes("rate limit") || error.status === 429) {
-                Alert.alert("Too Many Attempts", "Please wait a minute before requesting another password reset email.");
+            if (error) {
+                if (error.message.includes("rate limit") || error.status === 429) {
+                    Alert.alert("Too Many Attempts", "Please wait a minute before requesting another password reset email.");
+                } else {
+                    Alert.alert('Error', error.message);
+                }
             } else {
-                Alert.alert('Error', error.message);
+                Alert.alert('Success', 'Password reset email sent! Please check your inbox.');
             }
-        } else {
-            Alert.alert('Success', 'Password reset email sent! Please check your inbox.');
+        } catch (e: any) {
+            Alert.alert('Error', e.message || 'Failed to send reset email');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     }
 
     if (forgotPasswordMode) {
