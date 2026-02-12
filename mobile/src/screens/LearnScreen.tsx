@@ -1,8 +1,9 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Typography, LightTheme, DarkTheme } from '../theme/tokens';
 import { getDashboardSummary, getTermOfDay } from '../services/api';
+import { getTodayString } from '../utils/dateUtils';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../services/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
@@ -39,7 +40,7 @@ export const LearnScreen = () => {
     };
 
     useFocusEffect(
-        useCallback(() => {
+        React.useCallback(() => {
             fetchData();
         }, [])
     );
@@ -67,11 +68,9 @@ export const LearnScreen = () => {
     const displayLevel = summary?.level || profile?.skill_level || 'Beginner';
 
     // Check if it's a new day - if so, show 0 minutes (reset at midnight)
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const today = getTodayString();
     const lastActivityDate = summary?.last_activity_date;
-    const isNewDay = lastActivityDate && lastActivityDate !== today;
-
-    const dailyProgress = isNewDay ? 0 : (summary?.daily_minutes || 0);
+    const dailyProgress = (lastActivityDate && lastActivityDate >= today) ? (summary?.daily_minutes || 0) : 0;
     const dailyGoal = 5;
     const progressPercent = Math.min((dailyProgress / dailyGoal) * 100, 100);
 

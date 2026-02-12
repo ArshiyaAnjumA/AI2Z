@@ -65,8 +65,10 @@ export const NewsScreen = () => {
     const renderNewsItem = ({ item }: { item: any }) => (
         <View style={[styles.newsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.cardHeader}>
-                <Text style={[styles.sourceText, { color: colors.secondary }]}>{item.source}</Text>
-                <Text style={[styles.dateText, { color: colors.textLight }]}>{item.published_date}</Text>
+                <Text style={[styles.sourceText, { color: colors.primary }]}>{item.source}</Text>
+                <Text style={[styles.dateText, { color: colors.textLight }]}>
+                    {item.published_date || 'Today'}
+                </Text>
             </View>
             <Text style={[styles.newsTitle, { color: colors.text }]}>{item.title}</Text>
 
@@ -83,7 +85,7 @@ export const NewsScreen = () => {
             {item.term && (
                 <View style={[styles.termBox, { backgroundColor: isDark ? '#1A1E2E' : '#F0F4FF', borderColor: isDark ? '#2E3A59' : '#D0D9FF' }]}>
                     <View style={styles.termHeader}>
-                        <Ionicons name="bulb-outline" size={16} color={colors.secondary} />
+                        <Ionicons name="bulb-outline" size={16} color={colors.primary} />
                         <Text style={[styles.termTitle, { color: colors.text }]}>Key Term: {item.term}</Text>
                     </View>
                     <Text style={[styles.termDesc, { color: colors.textLight }]}>{item.term_explanation}</Text>

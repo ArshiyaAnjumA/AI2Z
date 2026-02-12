@@ -13,6 +13,7 @@ export const LightTheme = {
     warning: '#F59E0B',
     tabInactive: '#94A3B8',
     white: '#FFFFFF',
+    secondary: '#10B981', // Added emerald for secondary
 };
 
 export const DarkTheme = {
@@ -30,6 +31,7 @@ export const DarkTheme = {
     warning: '#FBBF24',
     tabInactive: '#64748B',
     white: '#FFFFFF',
+    secondary: '#34D399', // Added emerald for secondary
 };
 
 export const Colors = LightTheme;

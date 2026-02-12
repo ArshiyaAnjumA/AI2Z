@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { getTodayString, formatToLocalDate } from '../utils/dateUtils';
 
 // --- Profile & Stats ---
 
@@ -68,37 +69,94 @@ export const getDashboardSummary = async () => {
 
     const profile = await getProfile();
     const stats = await getStats();
-    // Simplified dashboard summary
-    // Fetch first lesson as daily lesson
-    // Use explicit FK hint if needed, or stick to simple valid syntax. 
-    // Added console.log for debugging
-    const { data: dailyLessonData, error: dailyError } = await supabase
-        .from('lessons')
-        .select('*, tracks(title)')
-        .limit(1)
-        .maybeSingle(); // maybeSingle instead of single so it doesn't throw if empty
-
-    if (dailyError) {
-        console.error("Daily Lesson Fetch Error:", dailyError);
-    }
-
+    // Fetch daily lesson with personalized progression
+    const today = getTodayString();
     let daily_lesson = null;
-    if (dailyLessonData) {
-        // Check if completed
-        const { data: attempt } = await supabase
+
+    // 1. Check if user completed a lesson today (one-per-day limit)
+    // We check from yesterday local time to catch sessions that might have rolled over into UTC "tomorrow"
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = formatToLocalDate(yesterday);
+
+    const { data: todaysAttempt } = await supabase
+        .from('lesson_attempts')
+        .select('*, lessons(*, tracks(title))')
+        .eq('user_id', user.id)
+        .gte('completed_at', yesterdayStr)
+        .order('completed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (todaysAttempt && todaysAttempt.lessons) {
+        const lesson = Array.isArray(todaysAttempt.lessons) ? todaysAttempt.lessons[0] : todaysAttempt.lessons;
+        if (lesson) {
+            const trackObj = Array.isArray((lesson as any).tracks) ? (lesson as any).tracks[0] : (lesson as any).tracks;
+            daily_lesson = {
+                ...lesson,
+                track: trackObj?.title || 'General',
+                is_completed: true
+            };
+        }
+    } else {
+        // 2. No lesson today - Find the next uncompleted lesson
+        // Get the order_index of the highest completed lesson
+        const { data: lastCompleted } = await supabase
             .from('lesson_attempts')
-            .select('*')
+            .select('lesson_id, lessons(order_index)')
             .eq('user_id', user.id)
-            .eq('lesson_id', dailyLessonData.id)
-            .eq('lesson_id', dailyLessonData.id)
+            .order('lessons(order_index)', { ascending: false })
             .limit(1)
             .maybeSingle();
 
-        daily_lesson = {
-            ...dailyLessonData,
-            track: dailyLessonData.tracks?.title || 'General',
-            is_completed: !!attempt
-        };
+        const lastIndex = (lastCompleted as any)?.lessons?.order_index ?? -1;
+
+        // Fetch the first lesson with a higher order_index
+        let { data: nextLesson } = await supabase
+            .from('lessons')
+            .select('*, tracks(title)')
+            .gt('order_index', lastIndex)
+            .order('order_index', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+        // 3. If no next lesson found, they might have finished everything -> Trigger AI Generation
+        if (!nextLesson) {
+            // Get the last lesson overall to base AI generation on
+            const { data: lastOverallLesson } = await supabase
+                .from('lessons')
+                .select('*, tracks(title)')
+                .order('order_index', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (lastOverallLesson) {
+                try {
+                    console.log("All lessons completed. Generating new lesson with AI...");
+                    await autoGenerateNextLesson(lastOverallLesson);
+
+                    // Fetch the newly generated lesson
+                    const { data: newLesson } = await supabase
+                        .from('lessons')
+                        .select('*, tracks(title)')
+                        .gt('order_index', lastOverallLesson.order_index)
+                        .limit(1)
+                        .maybeSingle();
+
+                    nextLesson = newLesson;
+                } catch (err) {
+                    console.warn("AI Generation failed:", err);
+                }
+            }
+        }
+
+        if (nextLesson) {
+            daily_lesson = {
+                ...nextLesson,
+                track: (nextLesson as any).tracks?.title || 'General',
+                is_completed: false
+            };
+        }
     }
 
     return {
@@ -485,18 +543,98 @@ export const getCertificate = async (certificateId: string) => {
 };
 
 
-export const getNews = async () => {
-    // Determine last completed quiz to unlock next news?
-    // Or just fetch all news or latest?
-    // Previous backend logic (NewsScreen): api.get('/news/latest')
+// Generate daily AI news using Supabase Edge Function
+export const generateDailyNews = async () => {
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return null;
 
-    // Simple fetch from news_items
+        console.log("Generating daily AI news via Edge Function...");
+
+        // Call Edge Function
+        const { data: newsContent, error: funcError } = await supabase.functions.invoke('generate-daily-news-v2', {
+            headers: {
+                Authorization: `Bearer ${session.access_token}`
+            }
+        });
+
+        if (funcError) throw funcError;
+        if (!newsContent) throw new Error("No news content returned");
+
+        // Save to database with today's date (Local Time)
+        const today = getTodayString();
+        const { data: savedNews, error: saveError } = await supabase
+            .from('news_items')
+            .insert({
+                title: newsContent.title,
+                source: newsContent.source || 'AI Daily',
+                what_happened: newsContent.what_happened,
+                why_it_matters: newsContent.why_it_matters,
+                term: newsContent.term,
+                term_explanation: newsContent.term_explanation,
+                quiz_json: newsContent.quiz,
+                published_date: today
+            })
+            .select()
+            .single();
+
+        if (saveError) {
+            console.error("Error saving news:", saveError);
+            return null;
+        }
+
+        console.log("Successfully generated daily news:", savedNews.title);
+        return savedNews;
+    } catch (err) {
+        console.error("Failed to generate daily news:", err);
+    }
+    return null;
+};
+
+// In-memory lock to prevent race conditions during news generation
+let isGeneratingNews = false;
+
+export const getNews = async () => {
+    // Calculate 7 days ago (Local Date)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const sevenDaysAgoStr = formatToLocalDate(sevenDaysAgo);
+
+    // Fetch recent news (last 7 days only)
     const { data, error } = await supabase
         .from('news_items')
         .select('*')
-        .order('published_date', { ascending: false });
+        .gte('published_date', sevenDaysAgoStr) // Reverted from published_at
+        .order('published_date', { ascending: false }); // Reverted from published_at
 
     if (error) throw error;
+
+    // Check if news exists for today (Local Time)
+    const today = getTodayString();
+    const hasNewsToday = data?.some(item => item.published_date === today); // Reverted logic to match published_date
+
+    // If no news for today and not already generating, generate it
+    if (!hasNewsToday && !isGeneratingNews) {
+        isGeneratingNews = true;
+        console.log("No news for today. Generating new article...");
+        try {
+            const newNews = await generateDailyNews();
+
+            if (newNews) {
+                // Re-fetch to include the new news
+                const { data: updatedData } = await supabase
+                    .from('news_items')
+                    .select('*')
+                    .gte('published_date', sevenDaysAgoStr) // Reverted from published_at
+                    .order('published_date', { ascending: false }); // Reverted from published_at
+
+                return updatedData || data;
+            }
+        } finally {
+            isGeneratingNews = false;
+        }
+    }
+
     return data;
 };
 

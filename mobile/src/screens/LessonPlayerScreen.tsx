@@ -42,38 +42,42 @@ export const LessonPlayerScreen = ({ route, navigation }: any) => {
     };
 
     const handleNext = () => {
+        console.log(`[LessonPlayer] handleNext called, currentPage: ${currentPage}, TOTAL_PAGES: ${TOTAL_PAGES}`);
         if (currentPage < TOTAL_PAGES - 1) {
             setCurrentPage(currentPage + 1);
         } else {
             // Finish
+            console.log('[LessonPlayer] Last page reached, calling handleComplete');
             handleComplete();
         }
     };
 
     const handleComplete = async () => {
+        console.log('[LessonPlayer] handleComplete started, lesson:', lesson?.id, lesson?.title);
         if (lesson) {
             try {
+                console.log('[LessonPlayer] Calling completeLesson API...');
                 // Call completeLesson directly (Database Trigger handles XP/Streak)
                 await completeLesson(lesson.id, 100);
+                console.log('[LessonPlayer] Lesson completed successfully');
 
                 // Check if this is a placeholder lesson (quiz won't exist for it)
                 if (lesson.id === '00000000-0000-0000-0000-000000000000') {
                     // Skip quiz for placeholder lessons, return to main tabs
+                    console.log('[LessonPlayer] Placeholder lesson, navigating to MainTabs');
                     navigation.navigate('MainTabs');
                     return;
                 }
 
-                // TRIGGER AUTO-GENERATION (Fire and Forget)
-                // We import and call this here so it runs while user takes the quiz
-                const { autoGenerateNextLesson } = require('../services/api');
-                autoGenerateNextLesson(lesson).catch((err: any) => console.warn("Background Gen Error:", err));
-
+                console.log('[LessonPlayer] Navigating to Quiz screen');
                 navigation.navigate('Quiz', { lessonId: lesson.id });
             } catch (e) {
-                console.error(e);
+                console.error('[LessonPlayer] Error in handleComplete:', e);
                 // Navigate to main tabs on error instead of goBack
                 navigation.navigate('MainTabs');
             }
+        } else {
+            console.warn('[LessonPlayer] handleComplete called but no lesson available');
         }
     };
 

@@ -41,3 +41,9 @@ mobile/android/
 # Supabase
 supabase/.branches/
 supabase/.temp/
+
+# Build artifacts and tooling
+node_modules/
+.idea/
+.expo/
+package-lock.json
